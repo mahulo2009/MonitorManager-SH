@@ -1,157 +1,158 @@
 ###################################################################################
-# CMake build rules for the Integration Service FIWARE SystemHandle library
+# CMake build rules for the Integration Service Monitor Manager SystemHandle library
 ###################################################################################
-cmake_minimum_required(VERSION 3.5.0 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.7.0 FATAL_ERROR)
 
-project (is-monitormanager VERSION "3.0.0" LANGUAGES CXX)
+project(is-monitormanager VERSION "3.0.0" LANGUAGES CXX)
+
+###################################################################################
+# Configure options
+###################################################################################
+
+option(BUILD_LIBRARY "Compile the Monitor Manager SystemHandle" ON)
 
 ###################################################################################
 # Load external CMake Modules.
 ###################################################################################
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${SANITIZERS_ROOT}/cmake)
+if(BUILD_LIBRARY)
+    set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${SANITIZERS_ROOT}/cmake)
 
-find_package(Sanitizers QUIET)
+    find_package(Sanitizers QUIET)
 
-if(SANITIZE_ADDRESS)
-    message(STATUS "Preloading AddressSanitizer library could be done using \"${ASan_WRAPPER}\" to run your program.")
+    if(SANITIZE_ADDRESS)
+        message(STATUS "Preloading AddressSanitizer library could be done using \"${ASan_WRAPPER}\" to run your program.")
+    endif()
 endif()
 
 ###################################################################################
-# External dependencies for the Integration Service FIWARE SystemHandle library
+# External dependencies for the Integration Service Monitor Manager SystemHandle library
 ###################################################################################
+if(BUILD_LIBRARY)
+    include(ExternalProject)
 
-find_package(xtypes REQUIRED)
-find_package(is-core REQUIRED)
-find_package(is-json-xtypes REQUIRED)
-
-if(WIN32)
-    find_package(yaml-cpp REQUIRED)
-    include(FindCURL)
-    find_package(curl REQUIRED)
+    find_package(is-core REQUIRED)
+    find_package(xtypes REQUIRED)
+    if(WIN32)
+        find_package(yaml-cpp)
+    endif()
 endif()
+
 ###################################################################################
-# Configure the Integration Service FIWARE SystemHandle library
+# Configure the Integration Service Monitor Manager SystemHandle library
 ###################################################################################
-
-########################################################################
-# Find curl
-find_path(CURLPP_DIR NAMES "include/curlpp/cURLpp.hpp" CMAKE_FIND_ROOT_PATH_BOTH)
-
-find_library(CURLPP_LIBRARY
-    NAMES
-        curlpp
-    PATH
-        CURLPP_DIR
-)
-
-add_library(curlpp SHARED IMPORTED)
-
-if(WIN32)
-    find_path(CURL_INCLUDE_DIRS NAMES "include/curl/curl.h")
-    include_directories(
-        "${CURL_INCLUDE_DIRS}"
-    )
-
-    include_directories(
-        "${CURLPP_DIR}/include"
+if(BUILD_LIBRARY)
+    add_library(${PROJECT_NAME}
+        SHARED
+            src/Publisher.hpp
+            src/SystemHandle.cpp
     )
 endif()
 
-set_target_properties(curlpp PROPERTIES
-    IMPORTED_LOCATION
-        "${CURLPP_LIBRARY}"
-    INTERFACE_INCLUDE_DIRECTORIES
-        "${CURLPP_DIR}/include"
-)
-
-if(NOT CURLPP_DIR)
-    message(FATAL_ERROR "curlpp not found, please install it or set 'CMAKE_PREFIX_PATH' with a valid installation."
-                        "\n\t(e.g.): sudo apt install libcurlpp-dev")
-endif()
-
-########################################################################
-# Find Asio
-find_path(ASIO_INCLUDE_DIR NAMES "asio.hpp")
-if(NOT ASIO_INCLUDE_DIR)
-    message(FATAL_ERROR "asio not found, please install it."
-                        "\n\t(e.g.): sudo apt install libasio-dev")
-endif()
-
-add_library(${PROJECT_NAME}
-    SHARED
-        src/NGSIV2Connector.cpp
-        src/SystemHandle.cpp
-)
-
-if(Sanitizers_FOUND)
-    add_sanitizers(${PROJECT_NAME})
-endif()
-
-set_target_properties(${PROJECT_NAME} PROPERTIES
-    VERSION
-        ${PROJECT_VERSION}
-    SOVERSION
-        ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
-    CXX_STANDARD
-        17
-    CXX_STANDARD_REQUIRED
-        YES
-)
-
-target_compile_options(${PROJECT_NAME}
-    PRIVATE
-        $<$<CXX_COMPILER_ID:GNU>:-Werror -Wall -Wextra -Wpedantic>
-)
-
-include(GNUInstallDirs)
-message(STATUS "Configuring [${PROJECT_NAME}]...")
-
-target_include_directories(${PROJECT_NAME}
-    PRIVATE
-        ${ASIO_INCLUDE_DIR}
-    INTERFACE
-        $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src>
-)
-
-target_link_libraries(${PROJECT_NAME}
-    PUBLIC
-        $<$<PLATFORM_ID:Windows>:${CURLPP_LIBRARY}>
-        $<$<AND:$<PLATFORM_ID:Windows>,$<CONFIG:Debug>>:${CURL_LIBRARY_DEBUG}>
-        $<$<AND:$<PLATFORM_ID:Windows>,$<CONFIG:Release>>:${CURL_LIBRARY_RELEASE}>
-        $<$<PLATFORM_ID:Windows>:yaml-cpp>
-    PRIVATE
-        is::core
-        is::json-xtypes
-        $<$<PLATFORM_ID:Linux>:curlpp>
-        $<$<PLATFORM_ID:Linux>:pthread>
-)
-
 ###################################################################################
-# Install the Integration Service FIWARE SystemHandle library
+# Find Monitor Manager dependency. If not, load it as external project
 ###################################################################################
-is_install_middleware_plugin(
-    MIDDLEWARE
-        fiware
-    TARGET
-        is-fiware curlpp
-)
+if(BUILD_LIBRARY)
 
-# Windows dll dependencies installation
-if(WIN32)
-    find_file(CURLPPDLL NAMES "curlpp.dll" PATHS "${CURLPP_DIR}" PATH_SUFFIXES "bin" )
-    find_file(CURLDDLL NAMES "libcurl-d.dll" PATHS "${CURL_INCLUDE_DIR}/../" PATH_SUFFIXES "bin" )
-    find_file(CURLDLL NAMES "libcurl.dll" PATHS "${CURL_INCLUDE_DIR}/../" PATH_SUFFIXES "bin" )
+    # Library continuation
+    if(Sanitizers_FOUND)
+        add_sanitizers(${PROJECT_NAME})
+    endif()
 
-    install (FILES ${CURLPPDLL} DESTINATION "${CMAKE_INSTALL_PREFIX}/../bin")
-    install (FILES ${CURLDLL} DESTINATION "${CMAKE_INSTALL_PREFIX}/../bin")
-    install (FILES ${CURLDDLL} DESTINATION "${CMAKE_INSTALL_PREFIX}/../bin")
+    set_target_properties(${PROJECT_NAME} PROPERTIES
+        VERSION
+            ${PROJECT_VERSION}
+        SOVERSION
+            ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
+        CXX_STANDARD
+            17
+        CXX_STANDARD_REQUIRED
+            YES
+        )
+
+    target_compile_options(${PROJECT_NAME}
+        PRIVATE
+            $<$<CXX_COMPILER_ID:GNU>:-Werror -Wall -Wextra -Wpedantic>
+        )
+
+    include(GNUInstallDirs)
+    message(STATUS "Configuring [${PROJECT_NAME}]...")
+
+    target_include_directories(${PROJECT_NAME}
+        INTERFACE
+            $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src>
+        )
+
+    include_directories(/usr/local/thirdparty/cpp-peglib/include/)
+    
 endif()
 
 ###################################################################################
-# Add the Integration Service FIWARE SystemHandle testing subdirectory
+# Install the Integration Service Monitor Manager SystemHandle library
 ###################################################################################
-include(CTest)
+#if(BUILD_LIBRARY)
+#    is_install_middleware_plugin(
+#        MIDDLEWARE
+#            monitormanager
+#        TARGET
+#            is-monitormanager
+#    )
+#endif()
+###################################################################################
+# Add the Integration Service Monitor Manager SystemHandle testing subdirectory
+###################################################################################
+if(BUILD_LIBRARY)
+    include(CTest)
 
-if(BUILD_TESTS OR BUILD_FIWARE_TESTS)
-    add_subdirectory(test)
+    if(BUILD_TESTS OR BUILD_MONITORMANAGER_TESTS)
+        add_subdirectory(test)
+    endif()
+endif()
+
+###################################################################################
+# Integration Service Monitor Manager SystemHandle API Reference
+###################################################################################
+if(BUILD_API_REFERENCE)
+    find_package(Doxygen REQUIRED)
+    # Create doxygen directories
+    add_custom_target(doc-dirs
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${PROJECT_BINARY_DIR}/doxygen
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${PROJECT_BINARY_DIR}/doxygen/html
+        COMMENT "Creating documentation directories" VERBATIM)
+
+    set(IS_MONITORMANAGER_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/src")
+    file(GLOB_RECURSE HPP_FILES "${IS_MONITORMANAGER_INCLUDE_DIR}/*.h*")
+
+    # Doxygen related variables
+    set(DOXYGEN_INPUT_DIR "${IS_MONITORMANAGER_INCLUDE_DIR}/")
+    set(DOXYGEN_OUTPUT_DIR "${PROJECT_BINARY_DIR}/doxygen")
+    set(DOXYGEN_INDEX_FILE "${PROJECT_BINARY_DIR}/doxygen/xml/index.xml")
+    set(DOXYFILE_IN "${IS_DOXYGEN_CONFIG_FILE}")
+    set(DOXYFILE_OUT "${PROJECT_BINARY_DIR}/doxygen-config")
+    set(DOXYGEN_TAGFILES "../is-core/is_core.tag=../is-core/doxygen/html")
+    set(DOXYGEN_HTML_DIR "${PROJECT_BINARY_DIR}/doxygen/html")
+
+    # Configure doxygen
+    configure_file(${DOXYFILE_IN} ${DOXYFILE_OUT} @ONLY)
+
+    # Doxygen command
+    add_custom_command(OUTPUT ${DOXYGEN_INDEX_FILE}
+        COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYFILE_OUT}
+        DEPENDS ${HPP_FILES}
+        MAIN_DEPENDENCY ${DOXYFILE_OUT} ${DOXYFILE_IN}
+        COMMENT "Generating doxygen documentation")
+
+    # Generate API reference
+    add_custom_target(doxygen ALL
+        DEPENDS ${DOXYGEN_INDEX_FILE}
+        COMMENT "Generated API documentation with doxygen" VERBATIM)
+    add_dependencies(doxygen doc-dirs)
+
+    # Install doxygen generated XML files
+    install(DIRECTORY ${PROJECT_BINARY_DIR}/doxygen/xml
+        DESTINATION doxygen
+        COMPONENT doxygen)
+    set(CPACK_COMPONENT_EXAMPLES_DISPLAY_NAME "Monitor Manager System Handle doxygen")
+    set(CPACK_COMPONENT_EXAMPLES_DESCRIPTION
+        "eProsima Monitor Manager System Handle doxygen documentation")
+    set(CPACK_COMPONENTS_ALL ${CPACK_COMPONENTS_ALL} doxygen)
 endif()
