@@ -27,23 +27,23 @@ class SystemHandle : public virtual FullSystem
         {
         }
 
-        bool configure(const core::RequiredTypes & /*types*/,
+        bool configure(const core::RequiredTypes & ,
                         const YAML::Node & configuration,
                         TypeRegistry & /*type_registry*/) override
         {
 
+            logger_ << utils::Logger::Level::INFO << "configure" << std::endl;
+
             if (configuration) 
             {
-                logger_ << utils::Logger::Level::INFO << "Configuration" << std::endl;
+                logger_ << utils::Logger::Level::INFO << "configuration" << std::endl;
             }
-
-            logger_ << utils::Logger::Level::INFO << "Configured!" << std::endl;
 
             return true;
         }
 
         bool okay() const override
-        {
+        {            
             return true;
         }
 
@@ -60,6 +60,7 @@ class SystemHandle : public virtual FullSystem
             SubscriptionCallback* callback,
             const YAML::Node& configuration) override final
         {
+            logger_ << utils::Logger::Level::INFO << "subscribe" << std::endl;
 
             logger_ << utils::Logger::Level::INFO 
                 << "subscribe topic_name:" << topic_name 
@@ -90,6 +91,9 @@ class SystemHandle : public virtual FullSystem
             const YAML::Node& configuration) override final        
         {
 
+            
+            logger_ << utils::Logger::Level::INFO << "advertise" << std::endl;
+
             auto publisher = std::make_shared<Publisher>();
 
             logger_ << utils::Logger::Level::INFO 
@@ -114,3 +118,5 @@ class SystemHandle : public virtual FullSystem
 } //  namespace sh
 } //  namespace is
 } //  namespace gcs
+
+IS_REGISTER_SYSTEM("monitormanager", eprosima::is::sh::monitormanager::SystemHandle)

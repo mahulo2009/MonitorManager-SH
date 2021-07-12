@@ -89,14 +89,14 @@ endif()
 ###################################################################################
 # Install the Integration Service Monitor Manager SystemHandle library
 ###################################################################################
-#if(BUILD_LIBRARY)
-#    is_install_middleware_plugin(
-#        MIDDLEWARE
-#            monitormanager
-#        TARGET
-#            is-monitormanager
-#    )
-#endif()
+if(BUILD_LIBRARY)
+    is_install_middleware_plugin(
+        MIDDLEWARE
+            monitormanager
+        TARGET
+            is-monitormanager
+    )
+endif()
 ###################################################################################
 # Add the Integration Service Monitor Manager SystemHandle testing subdirectory
 ###################################################################################
